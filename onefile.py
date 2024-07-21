@@ -1,6 +1,8 @@
 import requests
 #from bs4 import BeautifulSoup
 import json
+from requests.auth import HTTPBasicAuth
+from datetime import datetime
 
 class OneFileTimesheetEntry:
 
@@ -39,9 +41,6 @@ class OnefileCriteria:
         self.criteriaReference = str()
         self.criteriaTitle = str()
         
-
-
-
 class OnefileClass:
 
     def __init__(self):
@@ -59,7 +58,31 @@ class OnefileClass:
         self.standardID = str()
         self.standardTitle = str()
 
+        self.firstName = str()
+        self.lastName = str()
+
+        self.uname = str()
+        self.pword = str()
+
+        newHeaders = {
+                'authority' : 'learning.onefile.co.uk',
+                'Origin' : 'https://learning.onefile.co.uk',
+                'Referer' : 'https://learning.onefile.co.uk/',
+                'Sec-Ch-Ua-Mobile' : '?0',
+                'Sec-Fetch-Mode' : 'cors',
+                'Sec-Fetch-Site' : 'same-origin',
+                'Sec-Fetch-Dest' : '',
+                'Sec-Ch-Ua' : 'Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126',
+                'Sec-Ch-Ua-Platform' : 'macOS',
+                'User-Agent' : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+            }
+
+        self.session.headers.update(newHeaders)
+
     def login(self,uname,pword):
+
+        self.uname = uname
+        self.pword = pword
         
         r = self.session.get("https://onefile.co.uk/")
         file = open("Results1_GetOnefile.txt",'w')
@@ -97,6 +120,8 @@ class OnefileClass:
         data = json.loads(r.text)
         self.keychainAccountId = str(data["accounts"][0]["keychainAccountId"])
         self.productUserId = str(data["accounts"][0]["productUserId"])
+        self.firstName = data['firstName']
+        self.lastName = data['lastName']
         print(self.keychainAccountId)
         print(self.productUserId)
 
@@ -123,33 +148,33 @@ class OnefileClass:
         for cookie in self.session.cookies:
             print(cookie)
         
-        file = open("Results7_GetTimesheets.txt","r")
-        self.entryCounter= 0 
-        for line in file:
-            if 'CategoryLabel' in line:
-                entry = OneFileTimesheetEntry()
-                entry.categoryLabel = line.split('>')[1].split('<')[0]
-                for line in file:
-                    if 'DateFromLabel' in line:
-                        entry.dateFromLabel = line.split('>')[1].split('<')[0]
-                    elif 'DateToLabel' in line:
-                        entry.dateToLabel = line.split('>')[1].split('<')[0]
-                    elif 'CommentsLabel' in line:
-                        entry.titleLabel = line.split('>')[1].split('<')[0]
-                    elif 'TimeLabel' in line:
-                        entry.timeLabel = line.split('>')[1].split('<')[0]
-                        self.entries.append(entry)
-                        self.entryCounter = self.entryCounter + 1
-                        break
-        file.close()
-        file = open("StructureLog.txt",'w')
-        for entry in self.entries:
-            file.write('    ' + entry.categoryLabel + '\n')
-            file.write(entry.dateFromLabel + '\n')
-            file.write(entry.dateToLabel + '\n')
-            file.write(entry.titleLabel + '\n')
-            file.write(entry.timeLabel + '\n')
-        file.close()
+        #file = open("Results7_GetTimesheets.txt","r")
+        #self.entryCounter= 0 
+        #for line in file:
+            #if 'CategoryLabel' in line:
+                #entry = OneFileTimesheetEntry()
+                #entry.categoryLabel = line.split('>')[1].split('<')[0]
+                #for line in file:
+                    #if 'DateFromLabel' in line:
+                        #entry.dateFromLabel = line.split('>')[1].split('<')[0]
+                    #elif 'DateToLabel' in line:
+                        #entry.dateToLabel = line.split('>')[1].split('<')[0]
+                    #elif 'CommentsLabel' in line:
+                        #entry.titleLabel = line.split('>')[1].split('<')[0]
+                    #elif 'TimeLabel' in line:
+                        #entry.timeLabel = line.split('>')[1].split('<')[0]
+                        #self.entries.append(entry)
+                        #self.entryCounter = self.entryCounter + 1
+                        #break
+        #file.close()
+        #file = open("StructureLog.txt",'w')
+        #for entry in self.entries:
+         #   file.write('    ' + entry.categoryLabel + '\n')
+          #  file.write(entry.dateFromLabel + '\n')
+           # file.write(entry.dateToLabel + '\n')
+            #file.write(entry.titleLabel + '\n')
+            #file.write(entry.timeLabel + '\n')
+        #file.close()
                 
     def getJournal(self):
         r = self.session.get("https://learning.onefile.co.uk/api/trainingactivity",params=self.productUserId)
@@ -212,7 +237,8 @@ class OnefileClass:
                         entry.someID = str(journalJson['id'])
                         break
                 if found == False:
-                    print(str(journalJson['entryData']['trainingActivities'][0]))
+                    #print(str(journalJson['entryData']['trainingActivities'][0]))
+                    print(str(journalJson['entryData']['trainingActivities']))
             rParams = {
                 'lastEntryDate' : lastDate
             }
@@ -233,7 +259,7 @@ class OnefileClass:
         file.write(r.text)
         file.close()
         data = json.loads(r.text)
-        data = data[0]
+        
         self.standardID = str(data['standard_id'])
         self.standardTitle = data['title']
 
@@ -252,8 +278,6 @@ class OnefileClass:
                     newCriteria.unitTitle = unitTitle
                     self.criteriaDict[newCriteria.criteriaID] = newCriteria
         
-
-
 
         file = open("StructureLog.txt",'w')
         for entry in self.entries:
@@ -278,6 +302,95 @@ class OnefileClass:
             file.write("Linked activity: " + entry.linkedActivityId + '\n')
         file.close()
 
+    def postEntry(self,newEntry):
+
+        payload = {
+            "assessorID": '',
+            "authorID": '',
+            "comments": newEntry.titleLabel,
+            "dateFrom": newEntry.dateFromLabel + 'T' + newEntry.timeFromLabel +'.000Z',
+            "dateTimesheet": '',
+            "dateTo": newEntry.dateToLabel + 'T' + newEntry.timeToLabel +'.000Z',
+            "isOffTheJob": newEntry.isOTJ,
+            "isTrainingActivity": True,
+            "learnerID": int(self.productUserId),
+            "selected": False,
+            "time": int(newEntry.timeLabel),
+            "timeSheetCategoryID": int(newEntry.timeSheetCategoryId),
+            "timesheetID": ''
+        }
+
+        
+        r = self.session.post('https://learning.onefile.co.uk/api/trainingactivity/check',json=payload)
+        print('result of check: ' + str(r.status_code))
+
+        if r.text == '[]':
+            r = self.session.post('https://learning.onefile.co.uk/api/trainingactivity/activity',json=payload)
+            print(r.status_code)
+            response = json.loads(r.text)
+            payload['timesheetID'] = response['timesheetID']
+            payload['dateTimesheet'] = response['dateTimesheet']
+        else:
+            print('check response non null')
+            return
+        
+        if r.status_code == 200 or r.status_code == '200':
+
+            entryData = {
+                'criteria' : [int(item) for item in newEntry.criteria],
+                'text' : newEntry.textData,
+                'trainingActivities' : [payload['timesheetID']] + newEntry.trainingActivities
+            }
+
+            journalPayload = {
+                'authorId' : int(self.productUserId),
+                'createdOn' : '2024-07-16T' + datetime.now().strftime('%H:%M:%S') + '.000Z' ,
+                'criteria' : [int(item) for item in newEntry.criteria],
+                'entryData' : entryData,
+                'firstName' : self.firstName,
+                'id' : 0,
+                'isMigrated' : False,
+                'isUnassigned' : False,
+                'lastName' : self.lastName,
+                'learnedId' : int(self.productUserId),
+                'linkedActivityId' : int(payload['timesheetID']),
+                'privacy' : 959,
+                'standardCriteria' : {
+                    int(self.standardID) : [int(item) for item in newEntry.criteria]
+                },
+                'standards' : '',
+                'task' : '',
+                'taskId' : ''
+            }
+
+            for cookie in self.session.cookies:
+                print(cookie)
+            authKey = HTTPBasicAuth(self.uname, self.pword)
+
+            
+
+            r = self.session.post('https://learning.onefile.co.uk/api/journalEntry',json=journalPayload)
+            print(r.status_code)
+            print(r.text)
+            print(r.headers)
+            print('\n\n\n')
+
+            if r.status_code == 401 or r.status_code == '401':
+                for entry in self.entries:
+                    if entry.titleLabel == newEntry.titleLabel:
+                        return entry.timesheetId
+            else:
+                return 0
+
+            #for header in self.session.headers:
+                #print(header + '\n')
+
+            #if r.status_code == 401 or r.status_code == '401':
+                #r = self.session.post('https://learning.onefile.co.uk/api/journalEntry/update?blockEvent=false',json=journalPayload)
+                #print(r.status_code)
+
+    def deleteEntry(self,entryId):
+        return
 
 
 
