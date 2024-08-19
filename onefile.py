@@ -260,6 +260,7 @@ class OnefileClass:
         file.close()
         data = json.loads(r.text)
         
+        data = data[0]
         self.standardID = str(data['standard_id'])
         self.standardTitle = data['title']
 
@@ -329,6 +330,7 @@ class OnefileClass:
             print(r.status_code)
             response = json.loads(r.text)
             payload['timesheetID'] = response['timesheetID']
+            newEntry.timesheetId = response['timesheetID']
             payload['dateTimesheet'] = response['dateTimesheet']
         else:
             print('check response non null')
@@ -363,9 +365,9 @@ class OnefileClass:
                 'taskId' : ''
             }
 
-            for cookie in self.session.cookies:
-                print(cookie)
-            authKey = HTTPBasicAuth(self.uname, self.pword)
+            #for cookie in self.session.cookies:
+                #print(cookie)
+            #authKey = HTTPBasicAuth(self.uname, self.pword)
 
             
 
@@ -375,10 +377,11 @@ class OnefileClass:
             print(r.headers)
             print('\n\n\n')
 
+            #Checked for failed POST attempt
             if r.status_code == 401 or r.status_code == '401':
-                for entry in self.entries:
-                    if entry.titleLabel == newEntry.titleLabel:
-                        return entry.timesheetId
+                #self.getJournal()
+                return newEntry.timesheetId
+                    
             else:
                 return 0
 
@@ -390,6 +393,34 @@ class OnefileClass:
                 #print(r.status_code)
 
     def deleteEntry(self,entryId):
+        print("failed id: " + str(entryId))
+        
+
+        #Logic to be implemented
+        payload = {
+            'authorId' : '',
+            'createdOn' : '' ,
+            'criteria' : '',
+            'entryData' : {
+                'criteria' : '',
+                'text' : '',
+                'trainingActivities' : ''
+            },
+            'firstName' : '' ,
+            'id' : '',
+            'isMigrated' : False,
+            'isUnassigned' : False,
+            'lastName' : '',
+            'learnerId' : '',
+            'linkedActivityId' : '',
+            'privacy' : 959,
+            'standardCriteria' : '',
+            'task' : '',
+            'taskId' : ''
+        }
+
+        r = self.session.post('https://learning.onefile.co.uk/api/journalEntry/delete',json=payload)
+        print(r.text)
         return
 
 
